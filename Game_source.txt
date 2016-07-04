@@ -1,0 +1,538 @@
+using UnityEngine;
+using System.Collections;
+using UnityEngine.SceneManagement;
+
+public class MoveBullet : MonoBehaviour
+{
+
+    public float speed = 0.1f; //초기 스피드 값 
+    public float dethTime;
+
+    // Use this for initialization
+    void Start()
+    {
+        dethTime = 0f;
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        dethTime += 1.0f * Time.deltaTime;
+        //총알이 2초 뒤에 사라진다.
+        if (dethTime >= 2.0f)
+        {
+            Destroy(transform.gameObject);
+        }
+        //z축의 1 단위/초에 따라서 앞으로 개체가 움직인다.
+        transform.Translate(0, 0, speed);
+    }
+
+    //충돌 체크
+    void OnTriggerEnter(Collider col)
+    {
+        if (col.gameObject.tag.Equals("Player"))
+        {
+            GameManager.hit_player++;
+            if (GameManager.hit_player > 3)
+            {
+                SceneManager.LoadScene(0);
+            }
+            //만약 태그가 Enemy란 오브젝트가 있으면 제거
+            if (col.gameObject.tag.Equals("Enemy"))
+            {
+                GameManager.hit_enemy++;
+                if (GameManager.hit_enemy > 2)
+                {
+                    SceneManager.LoadScene(2);
+                }
+                //   Destroy(col.gameObject);
+                Destroy(transform.gameObject);
+            }
+        }
+    }
+}
+------------------------------------------------------------------------------------------------------------
+
+using UnityEngine;
+using System.Collections;
+
+public class Shoot : MonoBehaviour {
+
+    public GameObject bullet; //총알 오브젝트 생성
+   // public GameObject bulletHole;
+    public float delayTime = 8; //총알 생성 시간 값
+
+    private float counter = 0; // 총알 카운터 초기 시간 값
+
+	// Use this for initialization
+	void Awake () 
+    {
+	    
+	}
+	
+	// Update is called once per frame
+	void FixedUpdate () 
+    {
+        //마우스 왼쪽 버튼을 누를시 카운터 값이 생성 시간보다 작으면
+        if (Input.GetKey(KeyCode.Mouse0) && counter > delayTime)
+        {
+            //총알과 총알의 위치, 총알의 회전값을 계산, 카운터는 초기 값으로 계산
+            Instantiate(bullet, transform.position, transform.rotation);
+            counter = 0;
+        }
+        counter += Time.deltaTime * 1.0f; //카운터 값에 현재 시간 값을 적용
+	}
+}
+------------------------------------------------------------------------------------------------------------
+
+using UnityEngine;
+using System.Collections;
+
+public class Enemy : MonoBehaviour
+{
+   public Transform target; // 타켓 선정
+   public int moveSpeed; // 적 오브젝트 이동속도
+   public int rotaionSpeed; // 적 오브젝트 턴 속도
+   public int maxdistance; //적 오브젝트 최고
+
+
+   private Transform myTransform; //나의 오브젝트
+   public GameObject explosion; //이펙트
+
+   
+    void Awake ()
+    {
+      
+        myTransform = transform;
+    }
+
+    void Start()
+    {
+        //플레이어 찾는 기능
+        GameObject go = GameObject.FindGameObjectWithTag("Player");
+
+        target = go.transform;
+
+        maxdistance = 2;
+    }
+    
+    void Update()
+    {
+      
+        //나의 오브젝트를 향해 바라볼수 있도록 한다.
+        Debug.DrawLine(target.position, myTransform.position, Color.red);
+
+        myTransform.localRotation = Quaternion.Slerp(myTransform.localRotation, Quaternion.LookRotation(target.position - myTransform.position), rotaionSpeed * Time.deltaTime);
+
+        if (Vector3.Distance(target.position, myTransform.position) > maxdistance)
+        {
+            myTransform.position += myTransform.forward * moveSpeed * Time.deltaTime;
+        }
+    }
+    void OnTriggerEnter(Collider col)
+    {
+       // Instantiate(explosion, transform.position, Quaternion.identity);
+        //만약 태그가 Enemy란 오브젝트가 있으면 제거
+        if (col.gameObject.tag == "Bullet")
+        {
+            Instantiate(explosion, transform.position, Quaternion.identity);
+            Destroy(transform.gameObject);
+            
+        }
+     //   Destroy(col.gameObject);
+    }
+}
+------------------------------------------------------------------------------------------------------------
+
+using UnityEngine;
+using System.Collections;
+
+public class EnemyAttack : MonoBehaviour
+{
+    public  GameObject target; //player GameObject 참조
+    public float attactTime; //공격 시간
+    public float coolDown; //쿨타임
+
+
+    void Start ()
+    {
+        //참조 설정
+    //   Player = GameObject.FindGameObjectWithTag ("Player");
+        attactTime = 0;
+        coolDown = 2.0f;
+    
+    }
+    
+
+   /* void OnTriggerEnter (Collider other)
+    {
+        //입력 충돌체는 플레이어이면
+        if(other.tag == "Player")
+        {
+            //플레이어는 범위에
+            playerInRange = true;
+        }
+    }*/
+
+
+   /* void OnTriggerExit (Collider other)
+    {
+        //종료 입자 가속기는 플레이어의 경우
+        if(other.tag == "Player")
+        {
+            // 방향 벡터 계산하여 유닛벡터로 선언
+            Vector3 _Vec = (other.transform.position - transform.position).normalized;
+            // 방향벡터의 y좌표 성분 삭제
+            _Vec.y = 0;
+            // 방향벡터만큼 밀려날 크기 계산
+            other.transform.localPosition += _Vec * 0.5f;
+            // 데미지 구문 콜
+        //    other.SendMessage("Damaged", 10.0f);
+         
+        }
+    }*/
+    void Update ()
+    {
+        //업데이트는 지난 타이머에 호출 된 이후의 시간 추가
+        //   timer += Time.deltaTime;
+
+        //공격시간이 0초보다 크면 공격 안함
+        if (attactTime > 0)
+            attactTime -= Time.deltaTime;
+
+            if (attactTime < 0)
+                attactTime = 0;
+
+            if (attactTime == 0)
+            {
+                Attack();
+                attactTime = coolDown;
+            }
+    }
+    //공격 받을시 적 체력 감소
+   private void Attack ()
+    {
+        //타이머 리셋
+        //   timer = 0f;
+        float distance = Vector3.Distance(target.transform.position, transform.position);
+
+        Vector3 dir = (target.transform.position - transform.position).normalized;
+        float direction = Vector3.Dot(dir, transform.forward);
+
+        if (distance < 2.5f)
+        {
+            if (direction > 0)
+            {
+                PlayerHealth eh = (PlayerHealth)target.GetComponent("PlayerHealth");
+               // eh.AddjustCurrentHealth(-10);
+            }
+        }
+    }
+}
+
+------------------------------------------------------------------------------------------------------------
+
+using UnityEngine;
+using System.Collections;
+
+public class EnemyShotgun : MonoBehaviour {
+
+    public GameObject spawn; //총알 발사 지점 지정
+    public GameObject[] gun; //총알 오브젝트
+    public GameObject prefabShot; //총알 프리팹
+    public float enemyShotSpeed; //총알 속도
+    public float timeAttack; //총알 시간
+    public float damage = 1;
+    
+    private float delayAttack; //딜레이 속도
+    private Transform player; //타겟 선정
+    private Transform LKplayerPos;
+    RaycastHit hit;
+ 
+	// Use this for initialization
+	void Start () 
+    {
+        //플레이어를 찾도록 한다.
+        player = GameObject.FindGameObjectWithTag("Player").transform;
+    }
+    
+	// Update is called once per frame
+	void Update () 
+    {
+        Vector3 direction = transform.TransformDirection(Vector3.forward);
+        Debug.DrawRay(transform.position, direction * 10, Color.red);
+
+        delayAttack += Time.deltaTime;
+        if (delayAttack >= timeAttack)
+        {
+           // for (int x = 0; x < gun.Length; x++)
+           // {
+                //1.  적이 나를 향해 
+                //2. 총알을 발사한다
+                
+                GameObject shot = Instantiate(prefabShot, spawn.transform.position, spawn.transform.rotation) as GameObject;
+
+              //  GetComponent<Rigidbody>().AddForce(((Vector3)(player.position - shot.transform.position)).normalized * 500);
+              //  shot.transform.position = player.position;
+              //}
+
+           if (Physics.Raycast(player.transform.position, player.transform.forward, out hit))
+             {
+
+                 if (hit.collider.tag == "player")
+                 {
+                
+                     Debug.DrawLine(transform.position, hit.point, Color.red);
+                     hit.collider.SendMessageUpwards("ApplyDamage", damage, SendMessageOptions.DontRequireReceiver);
+                     LKplayerPos = player;
+                     print("player found");
+                 }
+              
+             }
+           delayAttack = 0;
+        }
+	}
+}
+------------------------------------------------------------------------------------------------------------
+
+using UnityEngine;
+using System.Collections;
+
+public class EnemyManager : MonoBehaviour
+{
+    public GameObject enemy; //적 오브젝트 생성
+    public float spawnTime = 3f; //스폰 시간
+    public Transform[] spawnPoints; //스폰 포인트
+  
+
+    void Start()
+    {
+            spawnPoints = GameObject.Find("SpawnPoint").GetComponentsInChildren<Transform>();
+            StartCoroutine(this.CreateEnemy());
+          /*   enemy = new GameObject[maxEnemy];
+
+            for (int i = 0; i < maxEnemy; i++)
+            {
+                //enemy[i] = (GameObject)Instantiate(enemyPrefab);
+                //enemy[i].name = "Enemy" + i.ToString();
+                //enemy[i].SetActive(false);
+
+            }
+            if (spawnPoints.Length > 0)
+            {
+                StartCoroutine(this.CreateEnemy());
+            }*/
+        //스폰 시간의 지연 후 스폰 함수를 호출
+        //InvokeRepeating ("Spawn", spawnTime, spawnTime);
+    }
+
+    IEnumerator CreateEnemy()
+    {
+        while(true)
+        {
+            int spawnPointIndex = Random.Range(0, spawnPoints.Length);
+            Instantiate(enemy, spawnPoints[spawnPointIndex].position, spawnPoints[spawnPointIndex].rotation);
+
+            yield return new WaitForSeconds(spawnTime);
+        }
+       /* while (!isGameOver)
+        {
+            yield return new WaitForSeconds(spawnTime);
+
+            foreach (GameObject obj in enemy)
+            {
+                if (obj.activeSelf == false)
+                {
+                    int idx = Random.Range(1, spawnPoints.Length);
+                    obj.transform.position = spawnPoints[idx].position;
+                    obj.SetActive(true);
+                    break;
+                }
+            }
+        }*/
+    }
+    void Spawn ()
+    {
+      
+        //이하 스폰 포인트의 수보다 0과 1 사이의 임의의 인덱스 찾기
+     //   int spawnPointIndex = Random.Range (0, spawnPoints.Length);
+        //무작위로 선택된 스폰 포인트 위치와 회전에서 적의 조립식의 인스턴스를 생성
+      //  Instantiate (enemy, spawnPoints[spawnPointIndex].position, spawnPoints[spawnPointIndex].rotation);
+    }
+}
+------------------------------------------------------------------------------------------------------------
+
+using UnityEngine;
+using System.Collections;
+
+public class GameManager : MonoBehaviour {
+
+    public static int hit_enemy;
+    public static int hit_player;
+
+	// Use this for initialization
+	void Awake () {
+        hit_enemy = 0;
+        hit_player = 0;
+	}
+
+    void Update()
+    {
+    }
+	// Update is called once per frame
+	void OnGUI () {
+        GUI.Label(new Rect(10, 10, 200, 20), string.Format("{0}{1}", "명중 :", hit_enemy));
+        GUI.Label(new Rect(10, 30, 200, 20), string.Format("{0}{1}", "피격 :", hit_player));
+	}
+}
+
+------------------------------------------------------------------------------------------------------------
+
+using UnityEngine;
+using System.Collections;
+
+[RequireComponent (typeof (LineRenderer))]
+
+public class Laser : MonoBehaviour {
+
+    private LineRenderer lr;
+
+	// Use this for initialization
+	void Start () 
+    {
+        lr = GetComponent<LineRenderer>();
+	}
+	
+	// Update is called once per frame
+	void Update () 
+    {
+        RaycastHit hit;
+
+        if (Physics.Raycast(transform.position, transform.forward, out hit))
+        {
+            if (hit.collider)
+            {
+                lr.SetPosition(1, new Vector3(0, 0, hit.distance));
+            }
+            else
+            {
+                lr.SetPosition(1, new Vector3(0, 0, 5000));
+            }
+        }
+	}
+}
+
+------------------------------------------------------------------------------------------------------------
+
+using UnityEngine;
+using System.Collections;
+
+public class ParticleSystemAutoDestroy : MonoBehaviour {
+
+    private ParticleSystem ps;
+
+	// Use this for initialization
+	void Start ()
+    {
+        ps = GetComponent<ParticleSystem>();
+	}
+	
+	// Update is called once per frame
+	void Update ()
+    {
+        if (ps)
+        {
+            if (!ps.IsAlive())
+            {
+                Destroy(gameObject);
+            }
+        }
+	}
+}
+
+------------------------------------------------------------------------------------------------------------
+
+using UnityEngine;
+using System.Collections;
+
+public class Zoom_In_Out : MonoBehaviour {
+
+    GameObject cameraParent;
+
+    float defaultZoom;
+
+	// Use this for initialization
+	void Start () 
+    {
+        cameraParent = GameObject.Find("cameraParent");
+
+        defaultZoom = Camera.main.fieldOfView;
+	}
+	
+	// Update is called once per frame
+	void Update () 
+    {
+        Camera.main.fieldOfView += (20 * Input.GetAxis("Mouse ScrollWheel"));
+
+        if (Camera.main.fieldOfView < 10)
+        {
+            Camera.main.fieldOfView = 10;
+        }
+    }
+}
+
+------------------------------------------------------------------------------------------------------------
+
+using UnityEngine;
+using System.Collections;
+using UnityEngine.SceneManagement;
+
+public class Intro : MonoBehaviour {
+
+
+
+	// Use this for initialization
+	void Start () {
+	
+	}
+	
+	// Update is called once per frame
+	void Update () {
+	
+	}
+
+    public void Click()
+    {
+        SceneManager.LoadScene(1);
+    }
+
+    public void ExitGame()
+    {
+        Application.Quit();
+    }
+}
+
+------------------------------------------------------------------------------------------------------------
+
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using System.Collections;
+
+public class Soldier : MonoBehaviour {
+
+	// Use this for initialization
+    void Start()
+    {
+
+    }
+	
+	// Update is called once per frame
+	void Update () {
+	
+	}
+
+    public void Click()
+    {
+        SceneManager.LoadScene(0);
+    }
+}
